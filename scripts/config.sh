@@ -34,6 +34,7 @@ WORKER="${WORKER:-}"                 # e.g. user@<worker address>; set it in scr
 FABRIC_PEER="${FABRIC_PEER:-}"       # the worker's CX7 address when WORKER is reached over another network
 WORKER_HF_CACHE="${WORKER_HF_CACHE:-}"  # the worker's Hugging Face cache when it is not its HF_HOME (absolute path)
 WORKER2="${WORKER2:-}"; FABRIC_PEER2="${FABRIC_PEER2:-}"; WORKER_HF_CACHE2="${WORKER_HF_CACHE2:-}"   # rank 2, as WORKER / FABRIC_PEER / WORKER_HF_CACHE
+WORKER3="${WORKER3:-}"; FABRIC_PEER3="${FABRIC_PEER3:-}"; WORKER_HF_CACHE3="${WORKER_HF_CACHE3:-}"   # rank 3 (TP=4, four-Spark fork)
 MASTER_PORT="${MASTER_PORT:-29551}"  # TensorFold's rendezvous port between the ranks (keep it on the private link)
 # The rendezvous address (rank 0's, --master): at TP=2 the head's address on the link to the worker; at TP>2 this
 # node's LAN address (what its hostname resolves to), which every worker reaches. SOCKET_IFNAME (TP>2): the netdev of
@@ -106,7 +107,7 @@ VISION_URLS="${VISION_URLS:-0}"
 # sparkDash aggregate decode at 4 / 8 requests at once: two Sparks prose 103.2 / 130.8 tok/s, code 126.7 / 167.0; three
 # Sparks prose 121.8 / 166.0, code 165.3 / 211.5. One request alone decodes as fast either way. The memory reserve
 # grows with PARALLEL (below), so the shared pool shrinks: two Sparks ~1.5M tokens at 8 (2.0-2.6M at 4), three ~4M.
-if [[ "$DRAFTER" != dflash2 ]]; then _par=1; elif [[ "${TP:-2}" == 3 ]]; then _par=8; else _par=4; fi
+if [[ "$DRAFTER" != dflash2 ]]; then _par=1; elif (( ${TP:-2} >= 3 )); then _par=8; else _par=4; fi
 PARALLEL="${PARALLEL:-$_par}"
 # The DSA latent cache and the indexer's pooled keys (patch 0038): fp8 (default) holds them as e4m3 rows with a
 # power-of-two scale each, half bf16's bytes: the 1M-token window with 4 streams fits (rank 0: 88.09 GiB estimated,
@@ -286,12 +287,14 @@ export TF_GLM_SHARED_PREFIX="$SHARED_PREFIX"
 # where PARALLEL=4 has it; the pool shrinks instead.
 _extra=$(awk -v p="$PARALLEL" -v w="${TF_GLM_MULTI_WINDOW:-32}" 'BEGIN { e = 0; if (p > 4) e += 0.95 * (p - 4);
   if (w > 32) e += 0.04 * (w - 32); printf "%.1f", e }')
-MEMORY_RESERVE_GIB="${MEMORY_RESERVE_GIB:-$(awk -v e="$_extra" 'BEGIN { printf "%.1f", 14.5 + e }')}"
+# RESERVE_EXTRA_GIB (four-Spark fork): extra reserve on top of the formula, for a head that also runs other services.
+MEMORY_RESERVE_GIB="${MEMORY_RESERVE_GIB:-$(awk -v e="$_extra" -v x="${RESERVE_EXTRA_GIB:-0}" 'BEGIN { printf "%.1f", 14.5 + e + x }')}"
 export TENSORFOLD_MEMORY_RESERVE_GIB="$MEMORY_RESERVE_GIB"
 # With more Sparks each holds fewer weights, so the pool can take more (the per-token KV cost is the same on every
 # rank: the latent cache is replicated). TP=3: 32 GiB leaves rank 0, the busiest, ~5 GiB under a 1M-token prompt
 # (at 27: 10.6 GiB lowest on rank 0, pool 5,257,216 tokens; at 32: 5,959,680).
-case "$TP" in 3) _pool=32 ;; *) _pool=12.5 ;; esac
+# TP=4 (four-Spark fork): each rank holds a quarter of the experts, ~18 GiB less than rank 0 at three, so the cap rises.
+case "$TP" in 3) _pool=32 ;; 4) _pool=48 ;; *) _pool=12.5 ;; esac
 KV_POOL_GIB="${KV_POOL_GIB:-$_pool}"
 export TF_GLM_CACHE_GIB="$KV_POOL_GIB"
 # The display reservation in the pool (patch 0072, PARALLEL above 1): the GB10 firmware keeps ~2 GiB for a screen that
@@ -322,6 +325,7 @@ NFS_SERVER="${NFS_SERVER:-}"
 # The third Spark (TP=3): WORKER_WEIGHTS2 (default: WORKER_WEIGHTS) and NFS_SERVER2 (default: the head's address on
 # that worker's link); NFS_PATH and NFS_VOLUME are the same for all.
 WORKER_WEIGHTS2="${WORKER_WEIGHTS2:-}"; NFS_SERVER2="${NFS_SERVER2:-}"
+WORKER_WEIGHTS3="${WORKER_WEIGHTS3:-}"; NFS_SERVER3="${NFS_SERVER3:-}"   # the fourth Spark (TP=4, four-Spark fork)
 NFS_VOLUME="${NFS_VOLUME:-glm53-hf}"
 KERNEL_CACHE="${KERNEL_CACHE:-$HOME/.cache/tensorfold-glm53}"   # compiled CUDA kernels, a folder per image's patches hash
 STATE_DIR="${STATE_DIR:-$HOME/.local/state/glm53-tensorfold}"   # this recipe's locks and setup marker

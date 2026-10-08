@@ -11,6 +11,9 @@
   <img src=".github/image.png" alt="GLM-5.3 Flash EXL3 on TensorFold, Dual DGX Sparks" width="100%">
 </p>
 
+> **Unofficial fork:** four Sparks (TP=4), up to 16 concurrent requests, and a fix for RoCE drops through a MikroTik
+> switch. See [FOUR-SPARKS.md](FOUR-SPARKS.md). Not affiliated with Mia's AI Lab; the rest of this README is Mia's, unchanged.
+
 Serve **GLM-5.3-Flash** from two NVIDIA DGX Sparks (GB10, 128 GB each, linked by their ConnectX-7 ports) through an
 OpenAI-compatible API, with **4 concurrent requests**, the model's full **1,048,576-token context** and **image and
 video input**. It runs [TensorFold](https://github.com/ashhart/TensorFold) v0.6.0 on both Sparks (one rank on each)

@@ -1,0 +1,45 @@
+# sixteen-streams (four-Spark fork): --parallel up to 16 for GLM-5.3-Flash on CUDA (PARALLEL_MOST and
+# segments.MAX_SEGS 8 -> 16; 1 to 8 streams keep their tables, grids and graphs), and an opt-in wider shared verify
+# window (TF_GLM_MULTI_WINDOW_WIDE=1: up to 128 rows). Against the published image's engine (TensorFold 0.6.0 plus
+# this recipe's patches; written on v1.8, applies unchanged to v1.9.1). Applied by four-sparks/image/Dockerfile to a
+# derived image, not through patches/, so the recipe's pinned image stays as published.
+diff --git a/tensorfold/families/glm5_next/cuda/engine.py b/tensorfold/families/glm5_next/cuda/engine.py
+--- a/tensorfold/families/glm5_next/cuda/engine.py
++++ b/tensorfold/families/glm5_next/cuda/engine.py
+@@ -304,7 +304,9 @@
+     return tuple(v + costs["block"] + 0.0 + costs["taps_row"] * 1 for v in costs["verify"])
+ 
+ 
+-PARALLEL_MOST = 8                     # --parallel: concurrent requests at most (segments.MAX_SEGS: a window's streams)
++# --parallel 9 to 16: the batched window's tables and graph grids, the drafter's rings, block passes and update rows
++# grow a stream as from 5 to 8 (``segments.seg_count``, ``MultiDrafter``), and so does the startup estimate
++PARALLEL_MOST = 16                    # --parallel: concurrent requests at most (segments.MAX_SEGS: a window's streams)
+ MULTI_WINDOW = 32                     # --parallel: rows of every stream's verify windows together (multi.MAX_WINDOW)
+ 
+ 
+@@ -320,8 +322,11 @@
+     value = (os.environ.get("TF_GLM_MULTI_WINDOW", "") if value is None else value).strip()
+     if value == "":
+         return MULTI_WINDOW
+-    if not value.isdecimal() or not 16 <= int(value) <= MLA_DECODE_ROWS or int(value) % 8:
+-        raise ValueError(f"TF_GLM_MULTI_WINDOW: 16 to {MLA_DECODE_ROWS} rows in steps of 8, not {value!r}")
++    # four-Spark fork: TF_GLM_MULTI_WINDOW_WIDE=1 opens 72 to 128 rows for 9 to 16 streams (opt-in, unvalidated upstream:
++    # buffers, scratch and graphs are sized by the window and the estimate takes rows + window; run the equality checks)
++    most = 128 if os.environ.get("TF_GLM_MULTI_WINDOW_WIDE", "0") == "1" else MLA_DECODE_ROWS
++    if not value.isdecimal() or not 16 <= int(value) <= most or int(value) % 8:
++        raise ValueError(f"TF_GLM_MULTI_WINDOW: 16 to {most} rows in steps of 8, not {value!r}")
+     return int(value)
+ 
+ 
+diff --git a/tensorfold/families/glm5_next/cuda/segments.py b/tensorfold/families/glm5_next/cuda/segments.py
+--- a/tensorfold/families/glm5_next/cuda/segments.py
++++ b/tensorfold/families/glm5_next/cuda/segments.py
+@@ -15,7 +15,7 @@
+ 
+ from .sparse import POOL, SPARSE_FROM, TOKENS, split_scratch
+ 
+-MAX_SEGS = 8          # streams a window holds at most (--parallel up to engine.PARALLEL_MOST)
++MAX_SEGS = 16         # streams a window holds at most (--parallel up to engine.PARALLEL_MOST)
+ SEGS_DEFAULT = 4      # a window's tables hold at least this many segments: --parallel 2 to 4 keep the four they had
+ EXTENT = 2048         # a stream's extent starts at a multiple of this many tokens (its pooled keys at base / 4)
+ 

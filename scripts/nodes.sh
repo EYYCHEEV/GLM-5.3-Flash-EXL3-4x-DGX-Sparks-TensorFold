@@ -10,14 +10,14 @@ wval() { local v; v=$(wvar "$1" "$2"); echo "${!v:-}"; }
 worker_host() { wval WORKER "$1"; }
 # The workers this start uses (1 .. TP-1), and every worker configured at all (stop.sh stops them all).
 worker_ids() { seq 1 $((TP - 1)); }
-configured_workers() { local i; for i in 1 2; do [[ -z "$(worker_host "$i")" ]] || echo "$i"; done; }
+configured_workers() { local i; for i in 1 2 3; do [[ -z "$(worker_host "$i")" ]] || echo "$i"; done; }
 # worker i's weights: WORKER_WEIGHTS for worker 1, WORKER_WEIGHTS<i> (default: WORKER_WEIGHTS) for the others
 worker_weights() { local w; w=$(wval WORKER_WEIGHTS "$1"); echo "${w:-$WORKER_WEIGHTS}"; }
 
-# check_workers: TP is 2 or 3, and WORKER .. WORKER<TP-1> are set and distinct (later ones are left out).
+# check_workers: TP is 2, 3 or 4 (four-Spark fork), and WORKER .. WORKER<TP-1> are set and distinct (later ones are left out).
 check_workers() {
   local i j h
-  [[ "$TP" =~ ^[23]$ ]] || die "TP is 2 (./start.sh) or 3 (./start-tp3.sh, experimental) Sparks, not $TP"
+  [[ "$TP" =~ ^[234]$ ]] || die "TP is 2 (./start.sh), 3 (./start-tp3.sh) or 4 (./start-tp4.sh, four-Spark fork) Sparks, not $TP"
   for i in $(worker_ids); do
     h=$(worker_host "$i")
     [[ -n "$h" ]] || die "TP=$TP needs $((TP - 1)) workers: set $(wvar WORKER "$i")=user@<address of rank $i> in scripts/local.sh (see scripts/local.sh.example)"
@@ -356,11 +356,13 @@ detect_links() {
 # Measured between the Sparks: a decode-sized all-gather 32 us (80 with NCCL's defaults) and a prompt chunk's 32 MB
 # 1.9 ms on two rails (3.5 on one). NCCL's other knobs (protocols, buffer sizes, QPs, NCCL_NET=IB and the like) were no
 # better, and some of them kept NCCL on one rail.
+# four-Spark fork: NCCL_BUFFSIZE passes through when set. Through a switch, four ranks burst up to channels x BUFFSIZE each
+# into a lagging receiver; the CRS812 holds ~3.3 MB a queue, so 524288 (2 MiB a sender) keeps it drop-free.
 nccl_env() {
   local dev=$1 hcas=$2 gid=$3
   echo "-e NCCL_SOCKET_IFNAME=$dev -e NCCL_IB_HCA=$hcas -e NCCL_IB_GID_INDEX=$gid" \
        "-e NCCL_MIN_NCHANNELS=${NCCL_CHANNELS:-4} -e NCCL_MAX_NCHANNELS=${NCCL_CHANNELS:-4}" \
-       ${NCCL_DEBUG:+-e NCCL_DEBUG=$NCCL_DEBUG}
+       ${NCCL_IB_TC:+-e NCCL_IB_TC=$NCCL_IB_TC} ${NCCL_BUFFSIZE:+-e NCCL_BUFFSIZE=$NCCL_BUFFSIZE} ${NCCL_DEBUG:+-e NCCL_DEBUG=$NCCL_DEBUG}
 }
 # TP>2, from the owner's 3-Spark vLLM recipe on this triangle: the bootstrap socket on the network every node shares;
 # every RoCE device toward every peer; NCCL_CROSS_NIC=1 and subnet-aware routing (the image's NCCL 2.30.7 has it): each
@@ -374,7 +376,7 @@ nccl_env_n() {
        "-e NCCL_P2P_DISABLE=1 -e NCCL_SHM_DISABLE=1" \
        "-e NCCL_MIN_NCHANNELS=${NCCL_CHANNELS:-4} -e NCCL_MAX_NCHANNELS=${NCCL_CHANNELS:-4}" \
        "-e TF_ROCE_HCA=$hcas" \
-       ${NCCL_DEBUG:+-e NCCL_DEBUG=$NCCL_DEBUG}
+       ${NCCL_IB_TC:+-e NCCL_IB_TC=$NCCL_IB_TC} ${NCCL_BUFFSIZE:+-e NCCL_BUFFSIZE=$NCCL_BUFFSIZE} ${NCCL_DEBUG:+-e NCCL_DEBUG=$NCCL_DEBUG}
 }
 rank_nccl_env() {
   if (( TP == 2 )); then nccl_env "${NODE_DEV[$1]}" "${NODE_HCAS[$1]}" "${NODE_GID[$1]}"

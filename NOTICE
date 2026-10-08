@@ -5,6 +5,12 @@ This project's own code, scripts and documentation are licensed under the Apache
 LICENSE). If you redistribute this project or a modified version of it, keep this NOTICE file and state what you
 changed (Apache-2.0, section 4).
 
+Modified by EYYCHEEV (four-Spark fork, 2026-10), Apache-2.0, as permitted by section 4: a fourth rank (TP=4) in
+start-tp4.sh, scripts/config.sh, scripts/nodes.sh and start.sh; NCCL_IB_TC and NCCL_BUFFSIZE passed to every rank;
+four-sparks/image/ (a Dockerfile that applies sixteen-streams.patch to the published image: up to 16 concurrent
+requests and wider verify windows; the TensorFold code it modifies and quotes as diff context stays under TensorFold's
+licenses below); four-sparks/results.tsv; tools/tp4_*.py; FOUR-SPARKS.md; a pointer at the top of README.md.
+
 This project builds on third-party work that keeps its own license:
 
 TensorFold

@@ -1,0 +1,29 @@
+exp	utc	tp	c	config	boot_s	prose_agg	prose_req_med	prose_ttft_ms	code_agg	code_req_med	code_ttft_ms	loaded_ttft_s	loaded_tokens	equality	gates	status	note
+e00	2026-10-07T17:20Z	3	8	TP3 production profile (fp8, window 64, nccl)		179.1	23.1	368	209.0	30.2	778	17.61	16028	prior 11/11	pass	baseline	decode waves from first run; loaded probe ~16k
+e01	2026-10-07T17:30Z	4	8	TP4 stock image v0.6.0 (fp8, window 64, nccl, reserve+4)	289	218.7	28.2	261	270.8	38.0	508	15.97	16028	11/11 x3	pass	keep	first TP4 boot; pool 7.21M
+e02	2026-10-07T17:37Z	4	12	TP4 16-stream image, window 64	120	270.9	23.3	1396	297.3	26.5	1021	12.94	16028	11/11 11/11 11/11	pass	superseded	pool 6.53M
+e02r	2026-10-07T17:39Z	4	12	TP4 16-stream image, window 64	120	271.2	23.3	324	295.8	26.6	460	12.94	16028	11/11 x3 (e02)	pass	keep	warmed repeat; first-wave TTFT 1.4 s was one-time warm-up
+e03	2026-10-07T17:43Z	4	16	TP4 16-stream image, window 64	119	298.3	19.1	397	305.0	19.7	874	14.31	16027		pass	discard	pool 5.85M
+e04	2026-10-07T17:48Z	4	16	TP4 16-stream image, wide window 128	134	294.9	18.9	406	351.8	23.7	598	14.4	16029		pass	keep (winner)	
+e05	2026-10-07T17:54Z	4	16	C16 w128 + depth joint	231	253.8	16.4	401	233.6	15.5	599				fail:req18 (loaded n/a)	discard	pool 5.30M
+e06	2026-10-07T17:58Z	4	16	C16 w128 + async messages	135	294.5	18.9	404	351.2	23.7	594				pass (loaded n/a)	discard	pool 5.30M
+e07	2026-10-07T18:01Z	4	16	C16 w128 + depth scale:0.25	134	283.4	18.6	430	326.7	23.1	902				pass (loaded n/a)	discard	pool 5.30M
+e08	2026-10-07T18:04Z	4	16	C16 w128 + policy fnc7:0.15	134	276.3	18.2	543	340.5	23.3	852				pass (loaded n/a)	discard	pool 5.30M
+e09	2026-10-07T18:09Z	4	14	C14 w128	135	296.7	21.8	373	331.5	26.0	533	13.92	16029		pass	keep	pool 5.64M
+e10	2026-10-07T18:12Z	4	16	C16 w128 + L2 prefetch off	134	294.8	18.9	398	341.5	23.8	921				pass (loaded n/a)	discard	pool 5.29M
+e11c1	2026-10-07T18:16Z	4	1	winner C16 w128 boot, low load	134	74.7	74.7	106	118.2	118.2	141				pass (loaded n/a)	info	per-load check on winner boot
+e11c4	2026-10-07T18:16Z	4	4	winner C16 w128 boot, low load	134	155.1	39.2	186	201.3	55.9	253				pass (loaded n/a)	info	per-load check on winner boot
+e12	2026-10-07T19:48Z	4	16	C16 w128 + NCCL_ALGO=Ring (winner defaults from local.sh)	134	295.8	19.0	402	351.9	23.7	617	14.48	16027		pass	discard	fabric trial pool 5.30M
+s1	2026-10-07T20:06Z	4	16	winner soak 62 min, 16 clients (C16 w128)												pass (fabric: drops)	ok 1807, cancelled 222, errors 0, idle; mem floor 20.9 GiB; switch drops 1301 head + 42 spark-4 (queue 3); out_of_sequence 95; Xid 0, restarts 0
+s2	2026-10-07T20:06Z	4	8	attribution soak 16 min, 8 clients (C8 w64)												info	ok 456, errors 0; switch drops 338 head + 1924 spark-3 (queue 3); out_of_sequence 28: drops are a TP=4 fabric property, not C=16
+s3	2026-10-07T20:06Z	4	16	fabric soak 17 min, 16 clients (C16 w128 + NCCL_ALGO=Ring)												discard	ok 459, errors 0; switch drops 1236 head (queue 3); out_of_sequence 34: ring all-gather does not remove the drops
+f0	2026-10-08T03:14Z	4	16	winner, NCCL_BUFFSIZE default 4 MiB: 6-min soak												baseline	695 switch drops in 9 bursts toward the head; decode-only and isolated long prompts drop nothing
+f1	2026-10-08T03:14Z	4	16	winner + NCCL_BUFFSIZE=262144		288.9			331.1							fabric-safe	6-min soak: 0 drops, 0 ECN marks, 0 out-of-sequence; 32k prompt 13.8 s
+f2	2026-10-08T03:14Z	4	16	winner + NCCL_BUFFSIZE=1048576		296.4			352.6							discard	6-min soak: 5635 drops in 12 bursts toward the head; 32k prompt 13.4 s
+f3	2026-10-08T03:14Z	4	16	winner + NCCL_BUFFSIZE=524288		293.6			348.7							keep (candidate)	6-min soak: 0 drops, 4697 ECN marks, 0 out-of-sequence; 32k prompt 13.4 s; equality 11/11 x3; 195k needle correct, prefill 97.9 s
+s4	2026-10-08T04:20Z	4	16	winner + NCCL_BUFFSIZE=524288: 62-min soak, 16 clients (saved default)		292.2			347.5							keep (winner)	ok 1800, errors 0, idle; switch drops 0 on every lane; out_of_sequence 0; ECN marks 37808 (from 816882); mem floor 21.0 GiB; Xid 0, restarts 0; speeds from the restart on saved settings
+v1	2026-10-08T07:24Z	4	8	v1.9.1 published image, window 64, 512 KiB NCCL buffers		217.7	28.1	262	264.7	37.8	580	16.84	16029	11/11 x3		keep	warmed run; first run after kernel compile was cold (prose 208.2, code 222.1)
+v2	2026-10-08T07:24Z	4	16	v1.9.1 + sixteen-streams, window 128, 512 KiB NCCL buffers		292.3	18.8	404	348.2	23.4	559	14.88	16029	11/11 x3, twice at once		keep (winner)	195k needle correct, prefill 91.4 s; pool 5.23M
+v3	2026-10-08T07:24Z	4	1	v1.9.1 winner boot, one request		74.9	74.9	109	118.2	118.2	141					info	
+v4	2026-10-08T07:24Z	4	4	v1.9.1 winner boot, four requests		154.8	39.2	186	196.7	55.8	330					info	
+v5	2026-10-08T08:27Z	4	16	v1.9.1 winner: 62-min soak, 16 clients												keep (winner)	ok 1831, cancelled 224, errors 0, idle; 64.5 tok/s aggregate; switch drops 0; out_of_sequence 0; ECN marks 46218; mem floor 21.8 GiB; Xid 0, restarts 0
