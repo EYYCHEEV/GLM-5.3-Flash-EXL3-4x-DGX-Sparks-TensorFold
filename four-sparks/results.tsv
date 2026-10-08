@@ -27,3 +27,12 @@ v2	2026-10-08T07:24Z	4	16	v1.9.1 + sixteen-streams, window 128, 512 KiB NCCL buf
 v3	2026-10-08T07:24Z	4	1	v1.9.1 winner boot, one request		74.9	74.9	109	118.2	118.2	141					info	
 v4	2026-10-08T07:24Z	4	4	v1.9.1 winner boot, four requests		154.8	39.2	186	196.7	55.8	330					info	
 v5	2026-10-08T08:27Z	4	16	v1.9.1 winner: 62-min soak, 16 clients												keep (winner)	ok 1831, cancelled 224, errors 0, idle; 64.5 tok/s aggregate; switch drops 0; out_of_sequence 0; ECN marks 46218; mem floor 21.8 GiB; Xid 0, restarts 0
+L1	2026-10-08T08:54Z	4	1	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		75.1	75.1	110	119.4	119.4	141					keep (ladder)	failed 0
+L2	2026-10-08T08:54Z	4	2	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		121.0	62.2	176	161.7	82.1	185					keep (ladder)	failed 0
+L4	2026-10-08T08:54Z	4	4	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		155.9	39.4	186	203.2	56.3	234					keep (ladder)	failed 0
+L6	2026-10-08T08:54Z	4	6	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		193.4	32.9	214	240.2	45.0	297					keep (ladder)	failed 0
+L8	2026-10-08T08:54Z	4	8	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		218.0	28.1	259	273.1	38.0	344					keep (ladder)	failed 0
+L10	2026-10-08T08:54Z	4	10	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		242.2	25.2	429	282.9	32.1	410					keep (ladder)	failed 0
+L12	2026-10-08T08:54Z	4	12	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		269.5	23.2	319	300.7	27.1	452					keep (ladder)	failed 0
+L14	2026-10-08T08:54Z	4	14	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		295.0	21.7	419	327.2	25.7	504					keep (ladder)	failed 0
+L16	2026-10-08T08:54Z	4	16	v1.9.1 winner ladder (sixteen image, window 128, DENSE=fp8), warmed		292.1	18.8	401	348.0	23.4	555					keep (ladder)	failed 0

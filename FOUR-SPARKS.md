@@ -6,21 +6,40 @@ Everything else, including the pinned image, weights and drafter, is Mia's recip
 
 ## Results
 
-Measured with the sparkDash protocol (fixed prose and code prompts, 400 tokens, temperature 0, thinking off), `DENSE=fp8`, NCCL transport, after a warm-up.
-Each cell: total tok/s, then the median for one request.
+Four Sparks at TP=4 on recipe v1.9.1 (the 16-request image, the 128-row shared verify window, `DENSE=fp8`, NCCL transport), measured on 2026-10-08 with the sparkDash protocol (fixed prose and code prompts, 400 tokens, temperature 0, thinking off) from the head Spark, on one boot after a warm-up.
 
-| Setup | Recipe | Prose | Code |
-|---|---|---|---|
-| Mia's TP=2, 8 requests (her README) | v1.8 | 130.8 / 17.0 | 167.0 / 22.8 |
-| TP=3, 8 requests | v1.8 | 179.1 / 23.1 | 209.0 / 30.2 |
-| TP=4, 8 requests | v1.9.1 | 217.7 / 28.1 | 264.7 / 37.8 |
-| TP=4, 12 requests | v1.8 | 271.2 / 23.3 | 295.8 / 26.6 |
-| TP=4, 14 requests, 128-row window | v1.8 | 296.7 / 21.8 | 331.5 / 26.0 |
-| TP=4, 16 requests, 128-row window | v1.9.1 | 292.3 / 18.8 | 348.2 / 23.4 |
+**Decode** (aggregate across the concurrent requests, per request, and time to first token)
 
-- One request alone at TP=4 (v1.9.1): prose 74.9, code 118.2 tok/s; four at once: 154.8 and 196.7 in all.
+| Concurrent requests | Prose | Prose, per request | TTFT | Code | Code, per request | TTFT |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 75.1 tok/s | 75.1 tok/s | 110 ms | 119.4 tok/s | 119.4 tok/s | 141 ms |
+| 2 | 121.0 tok/s | 62.2 tok/s | 176 ms | 161.7 tok/s | 82.1 tok/s | 185 ms |
+| 4 | 155.9 tok/s | 39.4 tok/s | 186 ms | 203.2 tok/s | 56.3 tok/s | 234 ms |
+| 6 | 193.4 tok/s | 32.9 tok/s | 214 ms | 240.2 tok/s | 45.0 tok/s | 297 ms |
+| 8 | 218.0 tok/s | 28.1 tok/s | 259 ms | 273.1 tok/s | 38.0 tok/s | 344 ms |
+| 10 | 242.2 tok/s | 25.2 tok/s | 429 ms | 282.9 tok/s | 32.1 tok/s | 410 ms |
+| 12 | 269.5 tok/s | 23.2 tok/s | 319 ms | 300.7 tok/s | 27.1 tok/s | 452 ms |
+| 14 | 295.0 tok/s | 21.7 tok/s | 419 ms | 327.2 tok/s | 25.7 tok/s | 504 ms |
+| 16 | 292.1 tok/s | 18.8 tok/s | 401 ms | 348.0 tok/s | 23.4 tok/s | 555 ms |
+
+Sixteen at once: 3.9 times one request's prose and 2.9 times its code.
+Prose stops gaining at 14 requests while code still climbs; 16 is the most that keeps every stream above 18 tok/s.
+
+**Against fewer Sparks** (total tok/s, prose / code; two and three Sparks from Mia's README, each from one boot)
+
+| Concurrent requests | 2 Sparks, `PARALLEL=8` | 3 Sparks, `PARALLEL=8` | 4 Sparks, `PARALLEL=16` |
+| ---: | ---: | ---: | ---: |
+| 1 | | 65.7 / 100.4 | 75.1 / 119.4 |
+| 2 | | 93.8 / 129.5 | 121.0 / 161.7 |
+| 4 | 103.2 / 126.7 | 121.8 / 165.3 | 155.9 / 203.2 |
+| 6 | 116.8 / 150.0 | 146.3 / 192.6 | 193.4 / 240.2 |
+| 8 | 130.8 / 167.0 | 166.0 / 211.5 | 218.0 / 273.1 |
+| 16 | | | 292.1 / 348.0 |
+
+This is a rough guide, not a controlled comparison: Mia's runs use 4-bit dense weights (faster than FP8 in her measurements), sparkDash from another machine on the network, and, for two Sparks, GPU clocks capped at 2,200 MHz.
+Three of these same Sparks with this fork's settings (v1.8, 8 requests, `DENSE=fp8`) gave 179.1 / 209.0.
+
 - A fresh ~16k-token prompt arriving while 15 requests decode gets its first token in about 15 s.
-- Prose throughput is flat from 14 requests; 16 is the most that keeps every stream above 18 tok/s.
 - v1.8 and v1.9.1 measured the same at 8 and 16 requests (v1.8: 218.7 / 270.8 at 8, 292.2 / 347.5 at 16).
 - At 16 requests on v1.9.1: the recipe's output-equality checks (drafted equals serial, concurrent equals alone) pass, also with two runs at once; the ~195k-token needle is found (prefill 91.4 s); a 62-minute 16-client soak (short, code, thinking, tool-call and 4k to 32k-token prompts, mid-stream disconnects) completed 1,831 requests with zero errors, zero switch drops and zero RDMA retransmissions.
 - The full experiment ledger, including discarded settings, is [`four-sparks/results.tsv`](four-sparks/results.tsv).
